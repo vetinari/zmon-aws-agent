@@ -298,7 +298,7 @@ def get_running_apps(region, existing_entities=None):
 
             result.append(ins)
 
-        if now.minute == 10:
+        if (now.hour % 6) == 0 and (now.minute % 10) == 0:
             imgs = []
             try:
                 imgs = aws_client.describe_images(ImageIds=list(images))['Images']
