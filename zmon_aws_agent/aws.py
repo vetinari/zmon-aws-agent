@@ -190,6 +190,7 @@ def get_running_apps(region, existing_entities=None):
     )
 
     result = []
+    images = {}
 
     for r in rs:
 
@@ -232,6 +233,11 @@ def get_running_apps(region, existing_entities=None):
                     'aws_id': i['InstanceId'],
                     'infrastructure_account': 'aws:{}'.format(owner),
                 }
+
+                img = i['ImageId'] if 'ImageId' in i else False
+                if img:
+                    images[img] = True
+                    ins['image_id'] = img
 
                 ins['block_devices'] = get_instance_devices(aws_client, i)
 
@@ -292,6 +298,24 @@ def get_running_apps(region, existing_entities=None):
                 ins['block_devices'] = get_instance_devices(aws_client, i)
 
             result.append(ins)
+
+        if (now.minute % 15) == 2:
+            imgs = []
+            try:
+                imgs = aws_client.describe_images(ImageIds=images.keys())['Images']
+                for i in result:
+                    if 'image_id' not in i:
+                        continue
+                    for img in imgs:
+                        if img['ImageId'] == i['image_id']:
+                            i['image_name'] = img['Name'] if 'Name' in img else 'UNKNOWN'
+                            if 'CreationDate' in img:
+                                i['image_date'] = img['CreationDate']
+                            else:
+                                i['image_date'] = '1970-01-01T00:00:00.000Z'
+                            break
+            except:
+                pass
 
     return result
 
