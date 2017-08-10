@@ -190,7 +190,7 @@ def get_running_apps(region, existing_entities=None):
     )
 
     result = []
-    images = {}
+    images = set()
 
     for r in rs:
 
@@ -234,10 +234,9 @@ def get_running_apps(region, existing_entities=None):
                     'infrastructure_account': 'aws:{}'.format(owner),
                 }
 
-                img = i['ImageId'] if 'ImageId' in i else False
-                if img:
-                    images[img] = True
-                    ins['image_id'] = img
+                if 'ImageId' in i:
+                    images.add(i['ImageId'])
+                    ins['image_id'] = i['ImageId']
 
                 ins['block_devices'] = get_instance_devices(aws_client, i)
 
@@ -299,10 +298,10 @@ def get_running_apps(region, existing_entities=None):
 
             result.append(ins)
 
-        if (now.minute % 15) == 2:
+        if now.minute == 10:
             imgs = []
             try:
-                imgs = aws_client.describe_images(ImageIds=images.keys())['Images']
+                imgs = aws_client.describe_images(ImageIds=list(images))['Images']
                 for i in result:
                     if 'image_id' not in i:
                         continue
