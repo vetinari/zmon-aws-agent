@@ -382,12 +382,14 @@ def test_aws_get_running_apps_existing(monkeypatch):
     dt.now.return_value.minute = 7
     monkeypatch.setattr('zmon_aws_agent.aws.datetime', dt)
 
-    boto = get_boto_client(monkeypatch, ec2_client)
+    get_boto_client(monkeypatch, ec2_client)
 
-    ec2_client.describe_instance_status.assert_not_called()
+    res = aws.get_running_apps(REGION)
+    assert res == result
+
+    calls = [call(InstanceId='ins-1', Attribute='userData'), call(InstanceId='ins-2', Attribute='userData')]
+    ec2_client.describe_instance_attribute.assert_has_calls(calls, any_order=True)
     ec2_client.describe_images.assert_not_called()
-
-    boto.assert_not_called()
 
 
 def test_aws_populate_dns(monkeypatch):

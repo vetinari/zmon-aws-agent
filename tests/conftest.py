@@ -371,7 +371,7 @@ def get_apps_existing():
             'resource_id': 'cd-app', 'application_id': 'app-1', 'application_version': '1.0',
             'source': 'registry/stups/zmon-aws-agent:cd81', 'source_base': 'registry/stups/zmon-aws-agent',
             'ports': [2222], 'runtime': 'docker', 'aws:cloudformation:logical_id': 'cd-app', 'name': 'stack-1',
-            'events': ['ev-1', 'ev-2'], 'spot_instance': True, 'block_devices': {}, 'image': {},
+            'events': [], 'spot_instance': True, 'block_devices': {}, 'image': {},
         },
         {
             'id': 'ins-2-{}[{}:{}]'.format(get_hash('192.168.20.16'), ACCOUNT, REGION),
