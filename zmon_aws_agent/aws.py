@@ -303,7 +303,7 @@ def get_running_apps(region, existing_entities=None):
 
         imgs = []
         # prevent fetching all images (in case the images is empty, it will do so):
-        if len(list(images)) > 0:
+        if list(images):
             try:
                 imgs = aws_client.describe_images(ImageIds=list(images))['Images']
                 for i in result:
