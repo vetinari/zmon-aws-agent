@@ -122,8 +122,9 @@ def get_weight_for_stack(stack_name, stack_version):
 def get_weight_for_elb(entity):
     for name in DNS_RR_CACHE_ZONE:
         zone = DNS_RR_CACHE_ZONE[name]
-        if zone['AliasTarget'] == entity['dns_name']+'.':
-            return zone.get('Weight', None)
+        for rec in zone:
+            if 'Weight' in rec and rec['Type'] == 'A' and rec['AliasTarget']['DNSName'] == entity['dns_name']+'.':
+                return rec['Weight']
     return None
 
 

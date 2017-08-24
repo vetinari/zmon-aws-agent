@@ -667,3 +667,18 @@ def test_aws_get_sqs_queues_fails_on_weird_arn(monkeypatch):
 
     calls = [call(QueueUrl=url, AttributeNames=['All']) for url in urls['QueueUrls']]
     sqs_client.get_queue_attributes.assert_has_calls(calls)
+
+
+@pytest.mark.parametrize(
+    'entity', [{'type': 'elb', 'dns_name': 'app.example.org'}]
+)
+def test_add_traffic_tags_to_entity(monkeypatch, entity):
+    aws.DNS_RR_CACHE_ZONE = {
+        'zone-1': [
+            {'SetIdentifier': 'r-1', 'Weight': '100', 'Type': 'CNAME'},
+            {'SetIdentifier': 'r-2', 'Weight': '100', 'Type': 'A', 'AliasTarget': {'DNSName': 'app.example.org.'}},
+        ],
+        'zone-2': [{'SetIdentifier': 'r-2-2', 'Weight': '100', 'Type': 'CNAME'}]
+    }
+    aws.add_traffic_tags_to_entity(entity)
+    assert entity['dns_traffic'], "true"
