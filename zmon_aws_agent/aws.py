@@ -119,12 +119,23 @@ def get_weight_for_stack(stack_name, stack_version):
     return records[0]['Weight']
 
 
+def get_weight_for_elb(entity):
+    for name in DNS_RR_CACHE_ZONE:
+        zone = DNS_RR_CACHE_ZONE[name]
+        if zone['AliasTarget'] == entity['dns_name']+'.':
+            return zone.get('Weight', None)
+    return None
+
+
 def add_traffic_tags_to_entity(entity):
-    if 'stack_name' in entity and 'stack_version' in entity:
+    weight = None
+    if entity['type'] == 'elb':
+        weight = get_weight_for_elb(entity)
+    elif 'stack_name' in entity and 'stack_version' in entity:
         weight = get_weight_for_stack(entity['stack_name'], entity['stack_version'])
 
-        if weight is not None and int(weight) > 0:
-            entity.update({'dns_weight': weight, 'dns_traffic': 'true'})
+    if weight is not None and int(weight) > 0:
+        entity.update({'dns_weight': weight, 'dns_traffic': 'true'})
 
 
 def get_hash(ip):
