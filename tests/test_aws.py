@@ -404,7 +404,7 @@ def test_aws_populate_dns(monkeypatch):
         {
             'ResourceRecordSets': [
                 {'SetIdentifier': 'r-1', 'Weight': '100', 'Type': 'CNAME'},
-                {'SetIdentifier': 'r-2', 'Weight': '100', 'Type': 'A', 'AliasTarget': {'DNSName': 'app.example.org'}},
+                {'SetIdentifier': 'r-2', 'Weight': '100', 'Type': 'A', 'AliasTarget': {'DNSName': 'app.example.org.'}},
                 {'SetIdentifier': 'r-skip', 'Weight': '100', 'Type': 'A', 'AliasTarget': {}},
                 {'SetIdentifier': 'r-skip', 'Weight': '100', 'Type': 'A'},
                 {'Weight': '100', 'Type': 'A'}, {'SetIdentifier': 'r-skip', 'Type': 'A'},
@@ -429,7 +429,7 @@ def test_aws_populate_dns(monkeypatch):
     dns_rr_cache_zone = {
         'zone-1': [
             {'SetIdentifier': 'r-1', 'Weight': '100', 'Type': 'CNAME'},
-            {'SetIdentifier': 'r-2', 'Weight': '100', 'Type': 'A', 'AliasTarget': {'DNSName': 'app.example.org'}},
+            {'SetIdentifier': 'r-2', 'Weight': '100', 'Type': 'A', 'AliasTarget': {'DNSName': 'app.example.org.'}},
         ],
         'zone-2': [{'SetIdentifier': 'r-2-2', 'Weight': '100', 'Type': 'CNAME'}]
     }
