@@ -145,7 +145,7 @@ def main():
     to_be_removed = []
 
     if len(apps) > 0:
-        elbs = aws.get_running_elbs(region, infrastructure_account)
+        elbs = aws.get_running_elbs(region, infrastructure_account, apps)
         scaling_groups = aws.get_auto_scaling_groups(region, infrastructure_account)
         rds = aws.get_rds_instances(region, infrastructure_account, entities)
         elasticaches = aws.get_elasticache_nodes(region, infrastructure_account)

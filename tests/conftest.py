@@ -183,8 +183,8 @@ def get_elbs_application():
 
     health = {
         'TargetHealthDescriptions': [
-            {'TargetHealth': {'State': 'healthy'}},
-            {'TargetHealth': {'State': 'healthy'}},
+            {'TargetHealth': {'State': 'healthy'}, 'Target': {'Id': 'i-123'}},
+            {'TargetHealth': {'State': 'healthy'}, 'Target': {'Id': 'i-234'}},
             {'TargetHealth': {'State': 'terminated'}},
         ]
     }

@@ -228,7 +228,7 @@ def test_aws_get_running_elbs(monkeypatch):
     monkeypatch.setattr('zmon_aws_agent.aws.get_running_elbs_classic', get_classic)
     monkeypatch.setattr('zmon_aws_agent.aws.get_running_elbs_application', get_application)
 
-    res = aws.get_running_elbs('r1', 'acc1')
+    res = aws.get_running_elbs('r1', 'acc1', [])
 
     assert res == [1, 2, 3, 4]
 
@@ -258,9 +258,9 @@ def test_aws_get_running_elbs_classic(monkeypatch, exc):
 
     if fail:
         with pytest.raises(Exception):
-            aws.get_running_elbs_classic(REGION, ACCOUNT)
+            aws.get_running_elbs_classic(REGION, ACCOUNT, [])
     else:
-        res = aws.get_running_elbs_classic(REGION, ACCOUNT)
+        res = aws.get_running_elbs_classic(REGION, ACCOUNT, [])
 
         assert res == result
 
@@ -303,9 +303,9 @@ def test_aws_get_running_elbs_application(monkeypatch, exc):
 
     if fail:
         with pytest.raises(Exception):
-            aws.get_running_elbs_application(REGION, ACCOUNT)
+            aws.get_running_elbs_application(REGION, ACCOUNT, [])
     else:
-        res = aws.get_running_elbs_application(REGION, ACCOUNT)
+        res = aws.get_running_elbs_application(REGION, ACCOUNT, [])
 
         assert res == result
 

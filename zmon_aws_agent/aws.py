@@ -294,8 +294,6 @@ def get_running_apps(region, existing_entities=None):
 
                     # `tags` is already a dict, but we need the raw list
                     assign_properties_from_tags(ins, i.get('Tags', []))
-
-                    add_traffic_tags_to_entity(ins)
                 else:
                     ins['id'] = entity_id('{}-{}[aws:{}:{}]'.format(tags.get('Name') or i['InstanceId'],
                                                                     get_hash(i['PrivateIpAddress'] + ''),
@@ -333,11 +331,11 @@ def get_running_apps(region, existing_entities=None):
     return result
 
 
-def get_running_elbs(region, acc):
-    return get_running_elbs_classic(region, acc) + get_running_elbs_application(region, acc)
+def get_running_elbs(region, acc, apps):
+    return get_running_elbs_classic(region, acc, apps) + get_running_elbs_application(region, acc, apps)
 
 
-def get_running_elbs_classic(region, acc):
+def get_running_elbs_classic(region, acc, apps):
     elb_client = boto3.client('elb', region_name=region)
 
     paginator = elb_client.get_paginator('describe_load_balancers')
@@ -367,6 +365,7 @@ def get_running_elbs_classic(region, acc):
         name = e['LoadBalancerName']
 
         protocol = e['ListenerDescriptions'][0]['Listener']['Protocol']
+        member_ids = {i['InstanceId']: True for i in e['Instances'] if 'InstanceId' in i}
 
         lb = {
             'id': entity_id('elb-{}[{}:{}]'.format(name, acc, region)),
@@ -386,6 +385,10 @@ def get_running_elbs_classic(region, acc):
         assign_properties_from_tags(lb, tags[name])
 
         add_traffic_tags_to_entity(lb)
+        if 'dns_traffic' in lb and lb['dns_traffic'] == 'true':
+            for app in apps:
+                if 'aws_id' in app and app['aws_id'] in member_ids:
+                    app.update({'dns_traffic': 'true', 'dns_weight': lb.get('dns_weight', '0')})
 
         lbs.append(lb)
 
@@ -408,7 +411,7 @@ def get_running_elbs_classic(region, acc):
     return lbs
 
 
-def get_running_elbs_application(region, acc):
+def get_running_elbs_application(region, acc, apps):
     elb_client = boto3.client('elbv2', region_name=region)
 
     paginator = elb_client.get_paginator('describe_load_balancers')
@@ -460,10 +463,9 @@ def get_running_elbs_application(region, acc):
 
         assign_properties_from_tags(lb, tags[arn])
 
-        add_traffic_tags_to_entity(lb)
-
         healthy_targets = 0
         members = 0
+        member_ids = {}
         for tg in target_groups:
             try:
                 target_health = call_and_retry(
@@ -474,12 +476,20 @@ def get_running_elbs_application(region, acc):
                 for th in target_health:
                     if th['TargetHealth']['State'] == 'healthy':
                         healthy_targets += 1
+                        member_ids[th['Target']['Id']] = True
+
             except ClientError as e:
                 if e.response['Error']['Code'] not in ('LoadBalancerNotFound', 'ValidationError', 'Throttling'):
                     raise
 
         lb['members'] = members
         lb['active_members'] = healthy_targets
+
+        add_traffic_tags_to_entity(lb)
+        if 'dns_traffic' in lb and lb['dns_traffic'] == 'true':
+            for app in apps:
+                if 'aws_id' in app and app['aws_id'] in member_ids:
+                    app.update({'dns_traffic': 'true', 'dns_weight': lb.get('dns_weight', '0')})
 
         lbs.append(lb)
 
