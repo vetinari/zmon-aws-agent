@@ -8,12 +8,16 @@ import requests
 import tokens
 import os
 
+import opentracing
+import instana.options as instanaOpts
+import instana.tracer
+
 from zmon_cli.client import Zmon, compare_entities
 
 import zmon_aws_agent.aws as aws
 import zmon_aws_agent.postgresql as postgresql
 
-from zmon_aws_agent.common import get_user_agent
+from zmon_aws_agent.common import get_user_agent, trace_span, trace_http
 
 
 logging.getLogger('urllib3.connectionpool').setLevel(logging.WARN)
@@ -26,6 +30,15 @@ logger = logging.getLogger('zmon-aws-agent')
 def get_existing_ids(existing_entities):
     """Return existing entities IDs based on a condition to facilitate entity update path."""
     return {entity['id'] for entity in existing_entities}
+
+
+def init_opentracing(impl):
+    if impl == 'instana':
+        # sets opentracing.tracer internally
+        instana.tracer.init(instanaOpts.Options(service='zmon-aws-agent', log_level=logging.INFO))
+    else:
+        # fall back to noop
+        opentracing.tracer = opentracing.Tracer()
 
 
 def remove_missing_entities(existing_ids, current_ids, zmon_client, json=False):
@@ -89,6 +102,7 @@ def main():
     argp.add_argument('--no-oauth2', dest='disable_oauth2', action='store_true', default=False)
     argp.add_argument('--postgresql-user', dest='postgresql_user', default=os.environ.get('AGENT_POSTGRESQL_USER'))
     argp.add_argument('--postgresql-pass', dest='postgresql_pass', default=os.environ.get('AGENT_POSTGRESQL_PASS'))
+    argp.add_argument('--opentracing', dest='opentracing', default=os.environ.get('AGENT_OPENTRACING'))
     args = argp.parse_args()
 
     if not args.disable_oauth2:
@@ -106,26 +120,36 @@ def main():
         if k and v:
             entity_extras[k] = v
 
-    # 1. Determine region
-    if not args.region:
-        logger.info('Trying to figure out region..')
-        try:
-            response = requests.get('http://169.254.169.254/latest/meta-data/placement/availability-zone', timeout=2)
-        except:
-            logger.exception('Region was not specified as a parameter and can not be fetched from instance meta-data!')
-            raise
-        region = response.text[:-1]
-    else:
-        region = args.region
+    init_opentracing(args.opentracing)
 
-    logger.info('Using region: {}'.format(region))
+    # 1. Determine region
+    with trace_span('determine-region') as span:
+        if not args.region:
+            logger.info('Trying to figure out region..')
+            try:
+                r = requests.Request('GET', 'http://169.254.169.254/latest/meta-data/placement/availability-zone')
+                req = r.prepare()
+                with trace_http('fetch-availability-zone', span, req):
+                    response = requests.Session().send(req, timeout=2)
+            except:
+                logger.exception(
+                    'Region was not specified as a parameter and can not be fetched from instance meta-data!')
+                raise
+            region = response.text[:-1]
+        else:
+            region = args.region
+
+        logger.info('Using region: {}'.format(region))
 
     logger.info('Entity service URL: %s', args.entityservice)
 
-    logger.info('Reading DNS data for hosted zones')
-    aws.populate_dns_data()
+    with trace_span('populate_dns_data'):
+        logger.info('Reading DNS data for hosted zones')
+        aws.populate_dns_data()
 
-    aws_account_id = aws.get_account_id(region)
+    aws_account_id = None
+    with trace_span('get_account_id'):
+        aws_account_id = aws.get_account_id(region)
     infrastructure_account = 'aws:{}'.format(aws_account_id) if aws_account_id else None
 
     if not infrastructure_account:
