@@ -41,8 +41,8 @@ def call_and_retry(fn, *args, **kwargs):
             raise
 
 
-def trace_span(name):
-    return opentracing.tracer.start_span(operation_name=name)
+def trace_span(name, parent=None):
+    return opentracing.tracer.start_span(operation_name=name, child_of=parent)
 
 
 def trace_http(name, parent_span, request):
