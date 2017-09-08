@@ -13,6 +13,8 @@ import yaml
 
 from botocore.exceptions import ClientError
 
+from opentracing_utils import trace
+
 from zmon_aws_agent.common import call_and_retry
 
 
@@ -65,7 +67,8 @@ def base_encode(integer, base=BASE_LIST):
     return ret
 
 
-def populate_dns_data():
+@trace(operation_name='populate_dns_data', pass_span=True)
+def populate_dns_data(**kwargs):
     route53 = boto3.client('route53')
     result = route53.list_hosted_zones()
     zones = result['HostedZones']
@@ -163,7 +166,8 @@ def get_instance_devices(aws_client, instance):
     return devices
 
 
-def get_instance_events(aws_client, instance):
+@trace(operation_name='get_instance_events', pass_span=True)
+def get_instance_events(aws_client, instance, **kwargs):
     try:
         instance_status_resp = call_and_retry(aws_client.describe_instance_status,
                                               InstanceIds=[instance['InstanceId']])
@@ -176,7 +180,8 @@ def get_instance_events(aws_client, instance):
     return []
 
 
-def get_running_apps(region, existing_entities=None):
+@trace(operation_name='get_running_apps', pass_span=True)
+def get_running_apps(region, existing_entities=None, **kwargs):
     aws_client = boto3.client('ec2', region_name=region)
 
     paginator = aws_client.get_paginator('describe_instances')
@@ -321,11 +326,13 @@ def get_running_apps(region, existing_entities=None):
     return result
 
 
-def get_running_elbs(region, acc):
+@trace(operation_name='get_running_elbs', pass_span=True)
+def get_running_elbs(region, acc, **kwargs):
     return get_running_elbs_classic(region, acc) + get_running_elbs_application(region, acc)
 
 
-def get_running_elbs_classic(region, acc):
+@trace(operation_name='get_running_elbs_classic', pass_span=True)
+def get_running_elbs_classic(region, acc, **kwargs):
     elb_client = boto3.client('elb', region_name=region)
 
     paginator = elb_client.get_paginator('describe_load_balancers')
@@ -396,7 +403,8 @@ def get_running_elbs_classic(region, acc):
     return lbs
 
 
-def get_running_elbs_application(region, acc):
+@trace(operation_name='get_running_elbs_application', pass_span=True)
+def get_running_elbs_application(region, acc, **kwargs):
     elb_client = boto3.client('elbv2', region_name=region)
 
     paginator = elb_client.get_paginator('describe_load_balancers')
@@ -474,7 +482,8 @@ def get_running_elbs_application(region, acc):
     return lbs
 
 
-def get_auto_scaling_groups(region, acc):
+@trace(operation_name='get_auto_scaling_groups', pass_span=True)
+def get_auto_scaling_groups(region, acc, **kwargs):
     groups = []
 
     as_client = boto3.client('autoscaling', region_name=region)
@@ -531,7 +540,8 @@ def get_auto_scaling_groups(region, acc):
     return groups
 
 
-def get_elasticache_nodes(region, acc):
+@trace(operation_name='get_elasticache_nodes', pass_span=True)
+def get_elasticache_nodes(region, acc, **kwargs):
     elc = boto3.client('elasticache', region_name=region)
     paginator = elc.get_paginator('describe_cache_clusters')
 
@@ -573,7 +583,8 @@ def get_elasticache_nodes(region, acc):
     return nodes
 
 
-def get_dynamodb_tables(region, acc):
+@trace(operation_name='get_dynamodb_tables', pass_span=True)
+def get_dynamodb_tables(region, acc, **kwargs):
     tables = []
 
     # catch exception here, original agent policy does not allow scanning dynamodb
@@ -610,7 +621,8 @@ def get_dynamodb_tables(region, acc):
     return tables
 
 
-def get_rds_instances(region, acc, existing_entities):
+@trace(operation_name='get_rds_instances', pass_span=True)
+def get_rds_instances(region, acc, existing_entities, **kwargs):
     entities = []
 
     now = datetime.now()
@@ -662,7 +674,8 @@ def get_rds_instances(region, acc, existing_entities):
     return entities
 
 
-def get_certificates(region, acc):
+@trace(operation_name='get_certificates', pass_span=True)
+def get_certificates(region, acc, **kwargs):
     iam_client = boto3.client('iam', region_name=region)
     acm_client = boto3.client('acm', region_name=region)
 
@@ -712,7 +725,8 @@ def get_certificates(region, acc):
     return entities
 
 
-def get_account_alias(region):
+@trace(operation_name='get_account_alias', pass_span=True)
+def get_account_alias(region, **kwargs):
     try:
         iam_client = boto3.client('iam', region_name=region)
         resp = iam_client.list_account_aliases()
@@ -721,7 +735,8 @@ def get_account_alias(region):
         return None
 
 
-def get_account_id(region):
+@trace(operation_name='get_account_id', pass_span=True)
+def get_account_id(region, **kwargs):
     try:
         iam_client = boto3.client('iam', region_name=region)
         role = iam_client.list_roles()['Roles'][0]
@@ -743,7 +758,8 @@ def get_apps_from_entities(instances, account, region):
     return applications
 
 
-def get_limits(region, acc, apps, elbs):
+@trace(operation_name='get_limits', pass_span=True)
+def get_limits(region, acc, apps, elbs, **kwargs):
     limits = {
         'ec2-max-instances': 20,
         'ec2-used-instances': len([a for a in apps if a['type'] == 'instance' and not a.get('spot_instance', False)]),
@@ -814,7 +830,8 @@ def get_limits(region, acc, apps, elbs):
     return entity
 
 
-def get_sqs_queues(region, acc, all_entities=None):
+@trace(operation_name='get_sqs_queues', pass_span=True)
+def get_sqs_queues(region, acc, all_entities=None, **kwargs):
     if all_entities is None:
         all_entities = []
     sqs_queues = []
